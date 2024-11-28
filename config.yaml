@@ -1,0 +1,23 @@
+time_window: 2
+row_to_remove: "1970-01-01 00:00:00"
+time_column: time
+needed_columns:
+  - te201
+  - te202
+  - te601
+  - te701
+  - te702
+  - pe301
+  - pe303
+  - pelgrossep
+  - pelconsumep
+  - orcmode
+conditions:
+  orcmode: 3
+margins:
+  - column: te201
+    margin: 2
+  - column: pe301
+    margin: 0.5
+  - column: pelgrossep
+    margin: 5
