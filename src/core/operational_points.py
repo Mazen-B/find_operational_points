@@ -84,8 +84,19 @@ def find_operational_points(data, time_col, mean_values, config):
                 logging.info(f"Operational point identified at {current_time}.")
 
                 # calculate mean values for the window
-                mean_values_dict = {col: data[(data[time_col] >= start_time) & (data[time_col] <= end_time)][col].mean() for col in mean_values if col != time_col}
+                window = data[(data[time_col] >= start_time) & (data[time_col] <= end_time)]
+                mean_values_dict = {
+                    col: round(window[col].mean(), 1) for col in mean_values if col != time_col
+                }
+                
+                # calculate pelnet if pelconsumep is in mean_values
+                if "pelconsumep" in mean_values:
+                    mean_values_dict["pelnet"] = round((window["pelgrossep"] - window["pelconsumep"]).mean(), 1)
+
                 mean_values_dict[time_col] = current_time
+                
+                # make time_col the first column
+                mean_values_dict = {time_col: mean_values_dict.pop(time_col), **mean_values_dict}
                 additional_info.append(mean_values_dict)
 
                 logging.info(f"Mean values for time {current_time}: {mean_values_dict}")
@@ -93,11 +104,10 @@ def find_operational_points(data, time_col, mean_values, config):
                 # skip half a window to avoid overlapping operational points
                 next_time = current_time + half_window
 
-                # Check if 'next_time' is beyond the last timestamp
                 if next_time > data[time_col].iloc[-1]:
                     break
 
-                # Find the next index
+                # find the next index
                 remaining_data = data[data[time_col] >= next_time]
                 if remaining_data.empty:
                     break
@@ -116,4 +126,3 @@ def find_operational_points(data, time_col, mean_values, config):
 
     except Exception as e:
         log_and_raise_error(f"An error occurred while finding operational points: {e}")
-
