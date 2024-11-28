@@ -10,7 +10,7 @@ class ConfigSchema(BaseModel):
     time_window: int = Field(..., ge=0, description="Time window must be 0 or a positive integer.")
     row_to_remove: Optional[str] = Field(None, description="Row to remove must be a valid datetime string or None.")
     time_column: str = Field(..., min_length=1, description="Time column must be a non-empty string.")
-    needed_columns: List[str] = Field(..., min_items=1, description="There must be at least one needed column.")
+    mean_values: List[str] = Field(..., min_items=1, description="There must be at least one mean values.")
     conditions: Dict[str, Any] = Field(..., description="Conditions must be a dictionary with column-value pairs.")
     margins: List[Dict[str, Any]] = Field(
         ...,

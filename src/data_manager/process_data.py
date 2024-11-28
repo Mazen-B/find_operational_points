@@ -6,7 +6,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.logging_setup import log_and_raise_error
 
-def filter_data(data, row_to_remove, needed_columns, conditions, time_col):
+def filter_data(data, needed_columns, time_col, conditions, row_to_remove):
     """
   This function filters data in a CSV or Excel file based on specified conditions.
   """
@@ -26,7 +26,7 @@ def filter_data(data, row_to_remove, needed_columns, conditions, time_col):
             
             logging.info(f"Filtering: Removed {removed_row_count} rows with time value '{row_to_remove}'.")
         
-        # Step 2: keep only the needed columns (first convert needed columns to lowercase)
+        # Step 2: keep only the needed columns
         all_columns = [time_col] + needed_columns
         missing_columns = [col for col in all_columns if col not in data.columns]
         if missing_columns:
@@ -54,6 +54,9 @@ def filter_data(data, row_to_remove, needed_columns, conditions, time_col):
         
         if data.empty:
             log_and_raise_error("Filtered data is empty. No CSV file will be saved.")
+
+        # reset index after filtering
+        data = data.reset_index(drop=True)
         return data
 
     except ValueError as ve:
