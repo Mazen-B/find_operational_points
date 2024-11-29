@@ -7,6 +7,8 @@ from src.data_manager.load_data import load_parse_data
 
 class TestLoadParseData(unittest.TestCase):
     def setUp(self):
+        self.time_col = "time"
+        self.date_format = "%Y-%m-%d %H:%M:%S"
         self.test_file = os.path.join("test_IO", "dummy_dataset.csv")
 
     def test_sorting_in_csv(self):
@@ -16,10 +18,10 @@ class TestLoadParseData(unittest.TestCase):
       (loading and normalizing columns) were executed successfully.
       """
         # call the load_parse_data function
-        sorted_data = load_parse_data(self.test_file)
+        sorted_data = load_parse_data(self.test_file, self.time_col)
 
         # extract the sorted "time" column as a list of strings
-        sorted_times = sorted_data["time"].dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
+        sorted_times = sorted_data[self.time_col].dt.strftime(self.date_format).tolist()
 
         # expected sorted values based on the dummy dataset
         expected_sorted_times = [
