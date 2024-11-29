@@ -13,6 +13,6 @@ def cleanup_file_content(output_file):
     """
   This function overwrite the log file so that it can be replaced by new content.
   """
-    if os.path.exists(output_file):
+    if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
       with open(output_file, "w") as file:
-          file.write("This is the log file that stores all the printed statement from one run.\n") 
+          file.write("This log file contains all output messages generated during a single program execution.\n") 

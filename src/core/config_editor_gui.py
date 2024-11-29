@@ -1,9 +1,12 @@
 import os
-import subprocess
+import sys
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
 from ttkbootstrap.tooltip import ToolTip
 from tkinter import filedialog, messagebox 
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from main import analyse_operational_points
 
 class ConfigEditorGUI(ttkb.Window):
     def __init__(self):
@@ -14,10 +17,12 @@ class ConfigEditorGUI(ttkb.Window):
         super().__init__(themename="cosmo")
         self.title("Main Tool Runner")
         self.geometry("600x650")
-        self.default_config_path = os.path.join("..", "..", "config.yaml")
-        self.custom_config_data = None
+        
         self.input_file = ttkb.StringVar()
         self.output_dir = ttkb.StringVar()
+        
+        self.default_config_path = os.path.join("config.yaml")
+        self.custom_config_data = None
 
         self.create_widgets()
 
@@ -238,11 +243,11 @@ def run_main(config_file, input_file, output_dir):
   This function calls the main.py script to generate the operational points analysis 
   """
     try:
-        subprocess.run(["python", "src/main.py", config_file, input_file, output_dir], check=True)
+        analyse_operational_points(config_file, input_file, output_dir)
         messagebox.showinfo("Success", "Script executed successfully!")
         app.destroy()
-    except subprocess.CalledProcessError as e:
-        messagebox.showerror("Error", f"Script execution failed: {e}")
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
         
 if __name__ == "__main__":
     app = ConfigEditorGUI()
