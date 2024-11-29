@@ -45,10 +45,3 @@ def analyse_operational_points(input_file, output_dir):
 
     except Exception as e:
         log_and_raise_error(f"An error occurred during processing: {e}")
-
-if __name__ == "__main__":
-    file_path = os.path.join("inputs", "combined_file.csv")
-    output_dir = os.path.join("outputs")
-
-    initialize_logging(output_dir)
-    analyse_operational_points(file_path, output_dir)
