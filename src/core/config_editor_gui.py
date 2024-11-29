@@ -1,9 +1,11 @@
 import os
 import sys
+import yaml
+import tempfile
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
 from ttkbootstrap.tooltip import ToolTip
-from tkinter import filedialog, messagebox 
+from tkinter import filedialog, messagebox
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from main import analyse_operational_points
@@ -16,7 +18,7 @@ class ConfigEditorGUI(ttkb.Window):
       """
         super().__init__(themename="cosmo")
         self.title("Main Tool Runner")
-        self.geometry("600x650")
+        self.geometry("580x630")
         
         self.input_file = ttkb.StringVar()
         self.output_dir = ttkb.StringVar()
@@ -168,45 +170,122 @@ class ConfigEditorGUI(ttkb.Window):
         self.conditions = [{"key": "orcmode", "value": ttkb.IntVar(value=3)}]
         self.add_condition_fields(self.conditions[0])
 
-        ttkb.Button(self.conditions_frame, text="Add Condition", bootstyle=INFO, command=self.add_condition).pack(pady=5, anchor="w")
+        # Margins
+        margins_frame = ttkb.Frame(self.custom_frame)
+        margins_frame.pack(fill="x", pady=2)
+        ttkb.Label(margins_frame, text="Margins").pack(side="left")
+        help_button = ttkb.Label(margins_frame, text="?", foreground="blue")
+        help_button.pack(side="left", padx=5)
+        ToolTip(help_button, text="Specify columns and margins as key-value pairs.")
 
-    def add_condition_fields(self, condition):
+        self.margins_frame = ttkb.Frame(self.custom_frame)
+        self.margins_frame.pack(fill="x", pady=5)
+
+        # add default margin
+        self.margins = [{"column": ttkb.StringVar(value="te201"), "margin": ttkb.DoubleVar(value=2.0)}]
+        self.add_margin_fields(self.margins[0])
+
+    #####################################
+    # helper functions for adding entries
+    #####################################
+    def add_entry_fields(self, parent_frame, item, add_after_func, remove_func, field_defs):
         """
-      This method creates and adds input fields for a condition, including entries for key and value
+      This method is a general method to create and add input fields for an item, including entries for key and value,
+      and adds "+" and "x" buttons for adding/removing items.
       """
-        frame = ttkb.Frame(self.conditions_frame)
+        frame = ttkb.Frame(parent_frame)
+        item["frame"] = frame
+
         frame.pack(fill="x", pady=2)
 
-        key_entry = ttkb.Entry(frame, width=20)
-        key_entry.insert(0, condition["key"])
-        key_entry.pack(side="left", padx=5)
+        # create fields based on field_defs
+        for field_def in field_defs:
+            if "label" in field_def:
+                ttkb.Label(frame, text=field_def["label"]).pack(side="left", padx=5)
+            entry = ttkb.Entry(frame, textvariable=field_def["variable"], width=field_def.get("width", 20))
+            entry.pack(side="left", padx=5)
+            if "entry_name" in field_def:
+                item[field_def["entry_name"]] = entry
 
-        value_entry = ttkb.Entry(frame, textvariable=condition["value"], width=10)
-        value_entry.pack(side="left", padx=5)
+        # "+" button to add a new item after this one
+        add_button = ttkb.Button(
+            frame,
+            text="➕",
+            bootstyle="success-outline",
+            command=lambda: add_after_func(item),
+            width=2,
+            padding=0
+        )
+        add_button.pack(side="right", padx=3)
 
-        # add Remove button
-        remove_button = ttkb.Button(frame, text="Remove", bootstyle=DANGER, command=lambda: self.remove_condition(condition, frame))
-        remove_button.pack(side="left", padx=5)
+        # "x" button to remove this item
+        remove_button = ttkb.Button(
+            frame,
+            text="✖",
+            bootstyle="danger-outline",
+            command=lambda: remove_func(item),
+            width=2,
+            padding=0
+        )
+        remove_button.pack(side="right", padx=3)
 
-        condition["key_entry"] = key_entry
-        condition["value_entry"] = value_entry
+    ###############################################
+    # helper functions for the "Conditions" Section
+    ###############################################
+    def add_condition_fields(self, condition):
+        condition["key_var"] = ttkb.StringVar(value=condition.get("key", ""))
+        condition["value_var"] = condition.get("value", ttkb.IntVar())
 
-    def remove_condition(self, condition, frame):
-        """
-      This method removes a condition from the conditions list and destroys its associated UI frame
-      """
-        
+        field_defs = [
+            {"label": "Key:", "variable": condition["key_var"], "width": 20, "entry_name": "key_entry"},
+            {"label": "Value:", "variable": condition["value_var"], "width": 10, "entry_name": "value_entry"}
+        ]
+
+        self.add_entry_fields(
+            parent_frame=self.conditions_frame,
+            item=condition,
+            add_after_func=self.add_condition_after,
+            remove_func=self.remove_condition,
+            field_defs=field_defs
+        )
+
+    def remove_condition(self, condition):
         self.conditions.remove(condition)
-        # Destroy the frame
-        frame.destroy()
+        condition["frame"].destroy()
 
-    def add_condition(self):
-        """
-      This method adds a new condition to the conditions list and create input fields for it.
-      """
-        condition = {"key": "", "value": ttkb.IntVar()}
-        self.conditions.append(condition)
-        self.add_condition_fields(condition)
+    def add_condition_after(self, condition):
+        index = self.conditions.index(condition)
+        new_condition = {"key": "", "value": ttkb.IntVar()}
+        self.conditions.insert(index + 1, new_condition)
+        self.add_condition_fields(new_condition)
+        new_condition["frame"].pack(after=condition["frame"])
+
+    ############################################
+    # helper functions for the "Margins" Section
+    ############################################
+    def add_margin_fields(self, margin):
+        field_defs = [
+            {"label": "Column:", "variable": margin["column"], "width": 20, "entry_name": "column_entry"},
+            {"label": "Margin:", "variable": margin["margin"], "width": 10, "entry_name": "margin_entry"}
+        ]
+        self.add_entry_fields(
+            parent_frame=self.margins_frame,
+            item=margin,
+            add_after_func=self.add_margin_after,
+            remove_func=self.remove_margin,
+            field_defs=field_defs
+        )
+
+    def add_margin_after(self, margin):
+        index = self.margins.index(margin)
+        new_margin = {"column": ttkb.StringVar(), "margin": ttkb.DoubleVar()}
+        self.margins.insert(index + 1, new_margin)
+        self.add_margin_fields(new_margin)
+        new_margin["frame"].pack(after=margin["frame"])
+
+    def remove_margin(self, margin):
+        self.margins.remove(margin)
+        margin["frame"].destroy()
 
     def load_custom_config(self):
         """
@@ -217,26 +296,55 @@ class ConfigEditorGUI(ttkb.Window):
         self.time_column.set("time")
         self.mean_values.set("TE201, TE202, TE601, TE701, TE702, PE301, PE303, pelgrossep, pelconsumep")
 
+        # clear existing margins and conditions
+        for condition in self.conditions[:]:
+            self.remove_condition(condition)
+        for margin in self.margins[:]:
+            self.remove_margin(margin)
+
+        # re-add default condition
+        self.conditions = [{"key": "orcmode", "value": ttkb.IntVar(value=3)}]
+        self.add_condition_fields(self.conditions[0])
+
+        # re-add default margins
+        self.margins = [
+            {"column": ttkb.StringVar(value="te201"), "margin": ttkb.DoubleVar(value=2.0)},
+            {"column": ttkb.StringVar(value="pe301"), "margin": ttkb.DoubleVar(value=0.5)},
+            {"column": ttkb.StringVar(value="pelgrossep"), "margin": ttkb.DoubleVar(value=5.0)}
+        ]
+
+        for margin in self.margins:
+            self.add_margin_fields(margin)
+
     def run_custom(self):
         """
-      This method runs the tool with the configuration modified by the user.
+      This method runs the tool with the user-modified configuration.
       """
         if not self.input_file.get() or not self.output_dir.get():
             messagebox.showwarning("Warning", "Please select input and output paths!")
             return
 
-        # build custom config
+        # build the custom config
         custom_config = {
             "time_window": self.time_window.get(),
             "row_to_remove": self.row_to_remove.get(),
             "time_column": self.time_column.get(),
             "mean_values": [val.strip() for val in self.mean_values.get().split(",")],
             "conditions": {cond["key_entry"].get(): cond["value"].get() for cond in self.conditions if cond["key_entry"].get()},
+            "margins": [{"column": margin["column"].get(), "margin": margin["margin"].get()} for margin in self.margins]
         }
 
-        # run the main.py script with the custom configuration
-        run_main(custom_config, self.input_file.get(), self.output_dir.get())
+        try:
+            # write the custom configuration to a temporary YAML file
+            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml") as temp_config_file:
+                yaml.dump(custom_config, temp_config_file)
+                temp_config_file_path = temp_config_file.name
 
+            # run the main process with the temporary config file path
+            run_main(temp_config_file_path, self.input_file.get(), self.output_dir.get())
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
 
 def run_main(config_file, input_file, output_dir):
     """

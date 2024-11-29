@@ -14,9 +14,9 @@ def analyse_operational_points(config_file, input_file, output_dir):
   """
     try:
         # specify the ouptput files
-        filtered_data_file = os.path.join(output_dir, "filtered_data.xlsx")
-        op_points_file = os.path.join(output_dir, "operational_points.xlsx")
-        additional_info_file = os.path.join(output_dir, "op_mean_values.xlsx")
+        filtered_data_file = os.path.join(output_dir, "input_file_filtered.xlsx")
+        op_points_file = os.path.join(output_dir, "only_operational_points.xlsx")
+        additional_info_file = os.path.join(output_dir, "op_with_mean_values.xlsx")
 
         # Step 1: initializes logging for console and file logging (and creates the output dir if necessary)
         initialize_logging(output_dir)
