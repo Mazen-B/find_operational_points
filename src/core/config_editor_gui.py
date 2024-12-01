@@ -21,7 +21,7 @@ class ConfigEditorGUI(ttkb.Window):
       """
         super().__init__(themename="cosmo")
         self.title("Main Tool Runner")
-        self.geometry("580x630")
+        self.geometry("800x850")
         
         self.input_file = ttkb.StringVar()
         self.output_dir = ttkb.StringVar()
