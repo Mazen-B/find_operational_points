@@ -1,7 +1,9 @@
 import os
 import sys
 import yaml
+import logging
 import tempfile
+import traceback
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
 from ttkbootstrap.tooltip import ToolTip
@@ -9,6 +11,7 @@ from tkinter import filedialog, messagebox
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from main import analyse_operational_points
+from config.validate_config import validate_config
 
 class ConfigEditorGUI(ttkb.Window):
     def __init__(self):
@@ -76,7 +79,8 @@ class ConfigEditorGUI(ttkb.Window):
         """
       This method opens a file dialog to select an input file (CSV or Excel) and store the file path.
       """
-        file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), ("Excel Files", "*.xlsx;*.xls")])
+        file_path = filedialog.askopenfilename(
+            filetypes=[("CSV and Excel Files", ("*.csv", "*.xlsx", "*.xls"))])
         if file_path:
             self.input_file.set(file_path)
 
@@ -320,31 +324,33 @@ class ConfigEditorGUI(ttkb.Window):
         """
       This method runs the tool with the user-modified configuration.
       """
-        if not self.input_file.get() or not self.output_dir.get():
-            messagebox.showwarning("Warning", "Please select input and output paths!")
-            return
-
-        # build the custom config
-        custom_config = {
-            "time_window": self.time_window.get(),
-            "row_to_remove": self.row_to_remove.get(),
-            "time_column": self.time_column.get(),
-            "mean_values": [val.strip() for val in self.mean_values.get().split(",")],
-            "conditions": {cond["key_entry"].get(): cond["value"].get() for cond in self.conditions if cond["key_entry"].get()},
-            "margins": [{"column": margin["column"].get(), "margin": margin["margin"].get()} for margin in self.margins]
-        }
-
         try:
-            # write the custom configuration to a temporary YAML file
+            # build the custom configuration
+            custom_config = {
+                "time_window": self.time_window.get(),
+                "row_to_remove": self.row_to_remove.get(),
+                "time_column": self.time_column.get(),
+                "mean_values": [val.strip() for val in self.mean_values.get().split(",")],
+                "conditions": {cond["key_entry"].get(): cond["value"].get() for cond in self.conditions if cond["key_entry"].get()},
+                "margins": [{"column": margin["column"].get(), "margin": margin["margin"].get()} for margin in self.margins]
+            }
+
+            # validate the configuration
+            validated_config = validate_config(custom_config)
+
+            # write the custom configuration and execute
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml") as temp_config_file:
-                yaml.dump(custom_config, temp_config_file)
+                yaml.dump(validated_config, temp_config_file)
                 temp_config_file_path = temp_config_file.name
 
             # run the main process with the temporary config file path
             run_main(temp_config_file_path, self.input_file.get(), self.output_dir.get())
 
+        except ValueError as ve:
+            messagebox.showerror("Validation Error", str(ve))
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
+            logging.error("Unexpected error: %s", e, exc_info=True)
+            messagebox.showerror("Error", f"An unexpected error occurred: {e}")
 
 def run_main(config_file, input_file, output_dir):
     """
@@ -354,8 +360,12 @@ def run_main(config_file, input_file, output_dir):
         analyse_operational_points(config_file, input_file, output_dir)
         messagebox.showinfo("Success", "Script executed successfully!")
         app.destroy()
+    except ValueError as ve:
+        messagebox.showerror("Validation Error", str(ve))
     except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        logging.error("An unexpected error occurred: %s", traceback.format_exc())
+        error_message = f"An unexpected error occurred:\n{str(e)}"
+        messagebox.showerror("Error", error_message)
         
 if __name__ == "__main__":
     app = ConfigEditorGUI()
