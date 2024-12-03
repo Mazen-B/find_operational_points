@@ -2,5 +2,4 @@ pandas
 pyyaml
 openpyxl
 pydantic
-tempfile
 ttkbootstrap
